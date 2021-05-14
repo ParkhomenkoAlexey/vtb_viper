@@ -1,0 +1,56 @@
+//
+//  {{ prefix }}{{ module_info.name }}{{ module_info.file_name }}
+//  {{ module_info.project_name }}
+//
+//  Created by {{ developer.name }} on {{ date }}.
+//  Copyright © {{ year }} {{ developer.company }}. All rights reserved.
+//
+import SMBCore
+import UIKit
+import Swinject
+
+class {{ module_info.name }}ModuleConfigurator: NSObject, Assembly {
+    
+    func assemble(container: Container) {
+        
+        guard
+            let logger = container.resolve(Logger.self) else {
+            return
+        }
+
+	guard
+            let transitionHandler = container.resolve(TransitionHandlerProtocol.self) else {
+            return
+        }
+        
+        container.register({{ module_info.name }}InteractorInput.self) { resolver in
+            let interactor = {{ module_info.name }}Interactor()
+            interactor.output = resolver.resolve({{ module_info.name }}PresenterProtocol.self)
+            interactor.logger = logger
+            return interactor
+        }.inObjectScope(.container)
+        
+        container.register({{ module_info.name }}RouterInput.self) { resolver in
+            let router = {{ module_info.name }}Router()
+            router.logger = logger
+            router.viewController = resolver.resolve({{ module_info.name }}ViewInput.self) as? UIViewController
+	    router.transitionHandler = transitionHandler
+            return router
+        }.inObjectScope(.container)
+    
+        container.register({{ module_info.name }}PresenterProtocol.self) { _ in
+            {{ module_info.name }}Presenter()
+        }.initCompleted { (resolver, presenterProtocol) in
+            guard let presenter = presenterProtocol as? {{ module_info.name }}Presenter else { return }
+            presenter.view = resolver.resolve({{ module_info.name }}ViewInput.self)
+            presenter.interactor = resolver.resolve({{ module_info.name }}InteractorInput.self)
+            presenter.router = resolver.resolve({{ module_info.name }}RouterInput.self)
+            presenter.logger = logger
+        }.inObjectScope(.container)
+        
+        container.register({{ module_info.name }}ViewInput.self) { _ in {{ module_info.name }}ViewController() }.initCompleted { (resolver, viewProtocol) in
+            guard let view = viewProtocol as? {{ module_info.name }}ViewController else { return }
+            view.output = resolver.resolve({{ module_info.name }}PresenterProtocol.self)
+        }.inObjectScope(.container)
+    }
+}
